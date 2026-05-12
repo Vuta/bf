@@ -3,5 +3,5 @@
 Usage:
 
 ```rs
-cargo run hello_world.bf
+cargo run examples/hello_world.bf
 ```

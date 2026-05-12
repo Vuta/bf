@@ -86,7 +86,11 @@ impl Interpreter {
                 Ins::Inc => self.tape[self.dp] = self.tape[self.dp].wrapping_add(1),
                 Ins::Dec => self.tape[self.dp] = self.tape[self.dp].wrapping_sub(1),
                 Ins::Out => print!("{}", self.tape[self.dp] as char),
-                Ins::In => todo!(),
+                Ins::In => {
+                    let mut b = [0u8; 1];
+                    std::io::stdin().read_exact(&mut b)?;
+                    self.tape[self.dp] = b[0];
+                }
                 Ins::FJmpZ if self.tape[self.dp] == 0 => self.ip = self.jmp_map[&self.ip],
                 Ins::BJmpNz if self.tape[self.dp] != 0 => self.ip = self.jmp_map[&self.ip],
                 _ => {},
