@@ -1,15 +1,15 @@
-use std::io::Read;
 use std::collections::HashMap;
+use std::io::Read;
 
 #[derive(Debug, PartialEq)]
 enum Ins {
-    RMov, // right mov data pointer 
-    LMov, // left mov data pointer
-    Inc, // increase byte pointed by data pointer
-    Dec, // decrease byte pointed by data pointer
-    Out, // output the byte at data pointer
-    In, // read one byte into the byte pointed by data pointer
-    FJmpZ, // jump instruction pointer forward if zero
+    RMov,   // right mov data pointer
+    LMov,   // left mov data pointer
+    Inc,    // increase byte pointed by data pointer
+    Dec,    // decrease byte pointed by data pointer
+    Out,    // output the byte at data pointer
+    In,     // read one byte into the byte pointed by data pointer
+    FJmpZ,  // jump instruction pointer forward if zero
     BJmpNz, // jump instruction pointer backward if non-zero
 }
 
@@ -44,7 +44,7 @@ impl Interpreter {
                 b',' => self.ins.push(Ins::In),
                 b'[' => self.ins.push(Ins::FJmpZ),
                 b']' => self.ins.push(Ins::BJmpNz),
-                _ => {},
+                _ => {}
             }
         }
 
@@ -58,7 +58,7 @@ impl Interpreter {
                         self.jmp_map.insert(i, id);
                     }
                     None => panic!("non-matching bracket at {i}"),
-                }
+                },
                 _ => {}
             }
         }
@@ -84,7 +84,7 @@ impl Interpreter {
                 }
                 Ins::FJmpZ if self.tape[self.dp] == 0 => self.ip = self.jmp_map[&self.ip],
                 Ins::BJmpNz if self.tape[self.dp] != 0 => self.ip = self.jmp_map[&self.ip],
-                _ => {},
+                _ => {}
             };
 
             self.ip += 1;
