@@ -2,8 +2,6 @@ mod app;
 mod interpreter;
 mod view;
 
-use std::env;
-
 use crossterm::event::{self, EnableBracketedPaste, Event, KeyCode};
 use crossterm::execute;
 
@@ -13,12 +11,9 @@ use crate::app::App;
 use crate::view::View;
 
 fn main() -> io::Result<()> {
-    let path = &env::args().nth(1).expect("must provide the source file");
-
     let mut terminal = ratatui::init();
-    let mut app = App::default();
-    app.store_path(path.to_string());
 
+    let mut app = App::default();
     let mut view = View::default();
 
     let result = run_app(&mut terminal, &mut app, &mut view);

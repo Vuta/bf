@@ -1,8 +1,7 @@
 use crate::app::App;
 
 use ratatui::Frame;
-use ratatui::layout::{Constraint, Direction, Layout, Position, Rect};
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::layout::{Constraint, Layout};
 use ratatui::widgets::{Block, Borders};
 
 pub struct View {
