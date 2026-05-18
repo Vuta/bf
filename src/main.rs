@@ -28,11 +28,6 @@ fn run_app(
     app: &mut App,
     view: &mut View,
 ) -> io::Result<()> {
-    // let mut interpreter = Interpreter::default();
-
-    // interpreter.tokenize(&app.source);
-    // interpreter.run()?;
-
     execute!(std::io::stdout(), EnableBracketedPaste)?;
 
     loop {
@@ -40,19 +35,41 @@ fn run_app(
 
         match event::read()? {
             Event::Paste(s) => {
-                app.textarea.set_yank_text(s);
-                app.textarea.paste();
+                app.input_source.set_yank_text(s);
+                app.input_source.paste();
             }
             Event::Key(key) => match key.code {
-                KeyCode::Esc => break,
+                KeyCode::Esc => {
+                    app.input_source.clear();
+                    app.interpreter.reset();
+                }
+                KeyCode::Char('q') => break,
+                KeyCode::Char('r') => {
+                    app.interpreter.reset();
+
+                    let mut s = String::new();
+                    for line in app.input_source.lines() {
+                        s.push_str(line);
+                    }
+                    app.interpreter.tokenize(&s);
+                    app.interpreter.run()?;
+                }
+                KeyCode::Char('s') => {
+                    if !app.interpreter.is_finish() {
+                        let mut s = String::new();
+                        for line in app.input_source.lines() {
+                            s.push_str(line);
+                        }
+                        app.interpreter.tokenize(&s);
+                        app.interpreter.step()?;
+                    }
+                }
                 _ => {
-                    app.textarea.input(key);
+                    app.input_source.input(key);
                 }
             },
             _ => {}
         };
-
-        // app.update(message);
     }
 
     Ok(())
