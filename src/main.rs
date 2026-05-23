@@ -6,6 +6,7 @@ use crossterm::event::{self, EnableBracketedPaste, Event, KeyCode};
 use crossterm::execute;
 
 use std::io;
+use std::time::Duration;
 
 use crate::app::{App, Mode};
 use crate::view::View;
@@ -29,30 +30,44 @@ fn run_app(terminal: &mut ratatui::DefaultTerminal, app: &mut App) -> io::Result
     loop {
         terminal.draw(|f| view.render(f, app))?;
 
-        let new_event = event::read()?;
+        let main_event = if event::poll(Duration::from_millis(100))? {
+            let event = event::read()?;
+            MainEvent::Input(event)
+        } else {
+            MainEvent::Timeout
+        };
 
-        match app.mode {
-            Mode::Input => match new_event {
-                Event::Paste(s) => app.handle_copy_paste(s),
-                Event::Key(key) => match key.code {
-                    KeyCode::Tab => app.switch_mode(),
-                    _ => app.handle_input(key),
-                },
-                _ => {}
-            },
-            Mode::Control => match new_event {
-                Event::Key(key) => match key.code {
-                    KeyCode::Tab => app.switch_mode(),
-                    KeyCode::Right => app.step()?,
-                    KeyCode::Enter => app.run()?,
-                    KeyCode::Esc => app.reset(),
-                    KeyCode::Char('q') => break,
+        match main_event {
+            MainEvent::Timeout => app.handle_timeout()?,
+            MainEvent::Input(event) => match app.mode {
+                Mode::Input => match event {
+                    Event::Paste(s) => app.handle_copy_paste(s),
+                    Event::Key(key) => match key.code {
+                        KeyCode::Tab => app.switch_mode(),
+                        _ => app.handle_input(key),
+                    },
                     _ => {}
                 },
-                _ => {}
+                Mode::Control => match event {
+                    Event::Key(key) => match key.code {
+                        KeyCode::Tab => app.switch_mode(),
+                        KeyCode::Right => app.step()?,
+                        KeyCode::Enter => app.run()?,
+                        KeyCode::Esc => app.reset(),
+                        KeyCode::Char(' ') => app.toggle(),
+                        KeyCode::Char('q') => break,
+                        _ => {}
+                    },
+                    _ => {}
+                },
             },
-        };
+        }
     }
 
     Ok(())
+}
+
+enum MainEvent {
+    Input(Event),
+    Timeout,
 }

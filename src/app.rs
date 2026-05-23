@@ -7,6 +7,7 @@ pub struct App<'a> {
     pub input_source: TextArea<'a>,
     pub interpreter: Interpreter,
     pub mode: Mode,
+    pub is_running: bool,
 }
 
 impl App<'_> {
@@ -15,6 +16,7 @@ impl App<'_> {
             input_source: TextArea::default(),
             interpreter: Interpreter::default(),
             mode: Mode::Input,
+            is_running: false,
         }
     }
 
@@ -39,6 +41,14 @@ impl App<'_> {
             }
             Mode::Control => self.mode = Mode::Input,
         };
+    }
+
+    pub fn handle_timeout(&mut self) -> std::io::Result<()> {
+        if self.is_running {
+            self.step()?;
+        }
+
+        Ok(())
     }
 
     pub fn handle_input(&mut self, key: crossterm::event::KeyEvent) {
@@ -71,22 +81,28 @@ impl App<'_> {
             }
         };
 
+        if self.interpreter.status == Status::Done {
+            self.is_running = false;
+        }
+
         Ok(())
     }
 
     pub fn run(&mut self) -> std::io::Result<()> {
-        self.interpreter.reset();
-
-        let s = self.read_source();
-        self.interpreter.tokenize(&s);
-
-        while self.interpreter.status != Status::Done {
-            self.interpreter.step()?;
-            let p = self.interpreter.current_position();
-            self.input_source.move_cursor(CursorMove::Jump(p.0, p.1));
+        if self.is_running {
+            return Ok(());
         }
 
+        self.interpreter.reset();
+        self.is_running = true;
+
         Ok(())
+    }
+
+    pub fn toggle(&mut self) {
+        if self.interpreter.status == Status::InProgress {
+            self.is_running = !self.is_running;
+        }
     }
 
     fn read_source(&self) -> String {

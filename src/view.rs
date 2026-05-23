@@ -80,7 +80,7 @@ impl View {
         };
 
         let p = Paragraph::new(
-            "Arrow→: Step       Enter↵: Run      Esc: Reset     Tab⇥: Switch mode     q: Quit",
+            "Arrow→: Step       Enter↵: Run      Space␣: Pause/Resume      Esc: Reset     Tab⇥: Switch mode     q: Quit",
         )
         .block(block)
         .centered();
