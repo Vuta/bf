@@ -14,9 +14,7 @@ fn main() -> io::Result<()> {
     let mut terminal = ratatui::init();
 
     let mut app = App::default();
-    let mut view = View::default();
-
-    let result = run_app(&mut terminal, &mut app, &mut view);
+    let result = run_app(&mut terminal, &mut app);
 
     ratatui::restore();
 
@@ -26,9 +24,10 @@ fn main() -> io::Result<()> {
 fn run_app(
     terminal: &mut ratatui::DefaultTerminal,
     app: &mut App,
-    view: &mut View,
 ) -> io::Result<()> {
     execute!(std::io::stdout(), EnableBracketedPaste)?;
+
+    let view = View::default(terminal.get_frame().area());
 
     loop {
         terminal.draw(|f| view.render(f, app))?;
