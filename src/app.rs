@@ -8,6 +8,7 @@ pub struct App<'a> {
     pub interpreter: Interpreter,
     pub mode: Mode,
     pub is_running: bool,
+    pub is_finishing: bool,
 }
 
 impl App<'_> {
@@ -17,6 +18,7 @@ impl App<'_> {
             interpreter: Interpreter::default(),
             mode: Mode::Input,
             is_running: false,
+            is_finishing: false,
         }
     }
 
@@ -44,6 +46,18 @@ impl App<'_> {
     }
 
     pub fn handle_timeout(&mut self) -> std::io::Result<()> {
+        if self.is_finishing {
+            while self.interpreter.status != Status::Done {
+                self.step()?;
+                let p = self.interpreter.current_position();
+                self.input_source.move_cursor(CursorMove::Jump(p.0, p.1));
+            }
+
+            self.is_finishing = false;
+
+            return Ok(());
+        }
+
         if self.is_running {
             self.step()?;
         }
@@ -103,6 +117,10 @@ impl App<'_> {
         if self.interpreter.status == Status::InProgress {
             self.is_running = !self.is_running;
         }
+    }
+
+    pub fn finish(&mut self) {
+        self.is_finishing = true;
     }
 
     fn read_source(&self) -> String {

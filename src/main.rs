@@ -55,6 +55,7 @@ fn run_app(terminal: &mut ratatui::DefaultTerminal, app: &mut App) -> io::Result
                         KeyCode::Enter => app.run()?,
                         KeyCode::Esc => app.reset(),
                         KeyCode::Char(' ') => app.toggle(),
+                        KeyCode::Char('e') => app.finish(),
                         KeyCode::Char('q') => break,
                         _ => {}
                     },
