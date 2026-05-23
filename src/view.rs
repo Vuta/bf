@@ -3,33 +3,43 @@ use crate::app::App;
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::prelude::{Rect, Style, Text};
-use ratatui::widgets::{Block, Cell, Paragraph, Row, Table};
+use ratatui::widgets::{Block, BorderType, Cell, Paragraph, Row, Table};
 
 pub struct View {
     source_panel: Rect,
     memory_panel: Rect,
     output_panel: Rect,
+    control_panel: Rect,
 }
 
 impl View {
     pub fn default(area: Rect) -> Self {
-        let layout = Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)]);
-        let [left, right] = layout.areas(area);
-        let [memory, output] = Layout::vertical([
-            Constraint::Percentage(50),
-            Constraint::Percentage(50),
-        ]).areas(right);
+        let [layout, control] =
+            Layout::vertical([Constraint::Percentage(90), Constraint::Percentage(10)]).areas(area);
+
+        let [left, right] =
+            Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
+                .areas(layout);
+
+        let [memory, output] =
+            Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(right);
 
         Self {
             source_panel: left,
             memory_panel: memory,
             output_panel: output,
+            control_panel: control,
         }
     }
 
     pub fn render(&self, frame: &mut Frame, app: &mut App) {
-        // render source code
-        let block = Block::bordered().title("Source Code");
+        let block = if app.is_input_mode() {
+            Block::bordered()
+                .title("Source Code")
+                .border_type(BorderType::Thick)
+        } else {
+            Block::bordered().title("Source Code")
+        };
         app.input_source.set_block(block);
         frame.render_widget(&app.input_source, self.source_panel);
 
@@ -57,7 +67,23 @@ impl View {
 
         // render output
         let block = Block::bordered().title("Output");
-        let b = Paragraph::new(str::from_utf8(&app.interpreter.output()).unwrap()).block(block);
-        frame.render_widget(b, self.output_panel);
+        let p = Paragraph::new(str::from_utf8(&app.interpreter.output()).unwrap()).block(block);
+        frame.render_widget(p, self.output_panel);
+
+        // render control
+        let block = if app.is_control_mode() {
+            Block::bordered()
+                .title("Control")
+                .border_type(BorderType::Thick)
+        } else {
+            Block::bordered().title("Control")
+        };
+
+        let p = Paragraph::new(
+            "Arrow→: Step       Enter↵: Run      Esc: Reset     Tab⇥: Switch mode     q: Quit",
+        )
+        .block(block)
+        .centered();
+        frame.render_widget(p, self.control_panel);
     }
 }

@@ -1,11 +1,12 @@
-use crate::interpreter::Interpreter;
+use crate::interpreter::{Interpreter, Status};
 
-use ratatui_textarea::TextArea;
+use ratatui_textarea::{CursorMove, TextArea};
 
 #[derive(Debug)]
 pub struct App<'a> {
     pub input_source: TextArea<'a>,
     pub interpreter: Interpreter,
+    pub mode: Mode,
 }
 
 impl App<'_> {
@@ -13,6 +14,94 @@ impl App<'_> {
         Self {
             input_source: TextArea::default(),
             interpreter: Interpreter::default(),
+            mode: Mode::Input,
         }
     }
+
+    pub fn reset(&mut self) {
+        let n = App::default();
+        *self = n;
+    }
+
+    pub fn is_input_mode(&self) -> bool {
+        self.mode == Mode::Input
+    }
+
+    pub fn is_control_mode(&self) -> bool {
+        self.mode == Mode::Control
+    }
+
+    pub fn switch_mode(&mut self) {
+        match self.mode {
+            Mode::Input => {
+                self.mode = Mode::Control;
+                self.input_source.move_cursor(CursorMove::Jump(0, 0));
+            }
+            Mode::Control => self.mode = Mode::Input,
+        };
+    }
+
+    pub fn handle_input(&mut self, key: crossterm::event::KeyEvent) {
+        self.input_source.input(key);
+
+        if self.interpreter.status != Status::New {
+            self.interpreter.reset();
+        }
+    }
+
+    pub fn handle_copy_paste(&mut self, s: String) {
+        self.input_source.set_yank_text(s);
+        self.input_source.paste();
+    }
+
+    pub fn step(&mut self) -> std::io::Result<()> {
+        match self.interpreter.status {
+            Status::Done => {}
+            Status::InProgress => {
+                self.interpreter.step()?;
+                let p = self.interpreter.current_position();
+                self.input_source.move_cursor(CursorMove::Jump(p.0, p.1));
+            }
+            Status::New => {
+                let s = self.read_source();
+                self.interpreter.tokenize(&s);
+                self.interpreter.step()?;
+                let p = self.interpreter.current_position();
+                self.input_source.move_cursor(CursorMove::Jump(p.0, p.1));
+            }
+        };
+
+        Ok(())
+    }
+
+    pub fn run(&mut self) -> std::io::Result<()> {
+        self.interpreter.reset();
+
+        let s = self.read_source();
+        self.interpreter.tokenize(&s);
+
+        while self.interpreter.status != Status::Done {
+            self.interpreter.step()?;
+            let p = self.interpreter.current_position();
+            self.input_source.move_cursor(CursorMove::Jump(p.0, p.1));
+        }
+
+        Ok(())
+    }
+
+    fn read_source(&self) -> String {
+        let mut s = String::new();
+        for line in self.input_source.lines() {
+            s.push_str(line);
+            s.push_str(";")
+        }
+
+        s
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Mode {
+    Input,
+    Control,
 }

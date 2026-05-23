@@ -7,7 +7,7 @@ use crossterm::execute;
 
 use std::io;
 
-use crate::app::App;
+use crate::app::{App, Mode};
 use crate::view::View;
 
 fn main() -> io::Result<()> {
@@ -21,10 +21,7 @@ fn main() -> io::Result<()> {
     result
 }
 
-fn run_app(
-    terminal: &mut ratatui::DefaultTerminal,
-    app: &mut App,
-) -> io::Result<()> {
+fn run_app(terminal: &mut ratatui::DefaultTerminal, app: &mut App) -> io::Result<()> {
     execute!(std::io::stdout(), EnableBracketedPaste)?;
 
     let view = View::default(terminal.get_frame().area());
@@ -32,42 +29,28 @@ fn run_app(
     loop {
         terminal.draw(|f| view.render(f, app))?;
 
-        match event::read()? {
-            Event::Paste(s) => {
-                app.input_source.set_yank_text(s);
-                app.input_source.paste();
-            }
-            Event::Key(key) => match key.code {
-                KeyCode::Esc => {
-                    app.input_source.clear();
-                    app.interpreter.reset();
-                }
-                KeyCode::Char('q') => break,
-                KeyCode::Char('r') => {
-                    app.interpreter.reset();
+        let new_event = event::read()?;
 
-                    let mut s = String::new();
-                    for line in app.input_source.lines() {
-                        s.push_str(line);
-                    }
-                    app.interpreter.tokenize(&s);
-                    app.interpreter.run()?;
-                }
-                KeyCode::Char('s') => {
-                    if !app.interpreter.is_finish() {
-                        let mut s = String::new();
-                        for line in app.input_source.lines() {
-                            s.push_str(line);
-                        }
-                        app.interpreter.tokenize(&s);
-                        app.interpreter.step()?;
-                    }
-                }
-                _ => {
-                    app.input_source.input(key);
-                }
+        match app.mode {
+            Mode::Input => match new_event {
+                Event::Paste(s) => app.handle_copy_paste(s),
+                Event::Key(key) => match key.code {
+                    KeyCode::Tab => app.switch_mode(),
+                    _ => app.handle_input(key),
+                },
+                _ => {}
             },
-            _ => {}
+            Mode::Control => match new_event {
+                Event::Key(key) => match key.code {
+                    KeyCode::Tab => app.switch_mode(),
+                    KeyCode::Right => app.step()?,
+                    KeyCode::Enter => app.run()?,
+                    KeyCode::Esc => app.reset(),
+                    KeyCode::Char('q') => break,
+                    _ => {}
+                },
+                _ => {}
+            },
         };
     }
 
